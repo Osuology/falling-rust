@@ -199,14 +199,6 @@ impl Piece {
         Ok(())
     }
 
-    fn update_hb(&mut self) -> GameResult {
-        for c in &mut self.cells {
-            c.update_hb().expect("Failed to update cell hitboxes from piece");
-        }
-
-        Ok(())
-    }
-
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         for c in &mut self.cells {
             c.draw(ctx).expect("Failed to draw cell from piece");
@@ -331,7 +323,7 @@ impl State {
 }
 
 impl ggez::event::EventHandler for State {
-    fn update(&mut self, ctx: &mut Context) -> GameResult {
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
         if std::time::Instant::now() - self.last_update >= std::time::Duration::from_millis(1000) {
             if self.can_move(PieceMove::Down) {
                 self.falling_piece.move_piece(PieceMove::Down).expect("Failed to use gravity");
