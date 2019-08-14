@@ -17,8 +17,8 @@ const BLUE: (f32, f32, f32) = (0.0, 0.0, 1.0);
 const RED: (f32, f32, f32) = (1.0, 0.0, 0.0);
 const GREEN: (f32, f32, f32) = (0.0, 1.0, 0.0);
 
-const EDGE_X1: f32 = 0.0;
-const EDGE_X2: f32 = CELL_SIZE*10.0;
+const EDGE_X1: f32 = CELL_SIZE*9.0;
+const EDGE_X2: f32 = EDGE_X1 + CELL_SIZE*10.0;
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -149,11 +149,11 @@ struct Piece {
 impl Piece {
     fn new(piece_type: ParentType, color: (f32, f32, f32)) -> Self {
         match piece_type {
-            ParentType::Block => Piece { pos: V2 {x: CELL_SIZE, y: CELL_SIZE}, cells: vec![Cell::new((CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color),Cell::new((CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color),Cell::new((CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: (CELL_SIZE/2.0) }, color),Cell::new((CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: (CELL_SIZE/2.0) },color)], piece: piece_type },
-            ParentType::Line => Piece { pos: V2 {x: (CELL_SIZE*2.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((0.0, 0.0), ParentType::Line, V2 {x: -(CELL_SIZE*2.0), y: 0.0 }, color),Cell::new((CELL_SIZE, 0.0), ParentType::Line, V2 {x: -CELL_SIZE, y: 0.0 },color),Cell::new((CELL_SIZE*2.0, 0.0), ParentType::Line, V2 {x: 0.0, y: 0.0 }, color),Cell::new((CELL_SIZE*3.0, 0.0), ParentType::Line, V2 {x: CELL_SIZE, y: 0.0 }, color)], piece: piece_type },
-            ParentType::L1 => Piece { pos: V2 {x: (CELL_SIZE*1.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((0.0, 0.0), ParentType::L1, V2 {x: -CELL_SIZE, y: 0.0 }, color),Cell::new((CELL_SIZE, 0.0), ParentType::L1, V2 {x: -0.0, y: 0.0 },color),Cell::new((CELL_SIZE, CELL_SIZE), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((CELL_SIZE, CELL_SIZE*2.0), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color)], piece: piece_type },
-            ParentType::L2 => Piece { pos: V2 {x: (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((0.0, 0.0), ParentType::L2, V2 {x: CELL_SIZE, y: 0.0 }, color),Cell::new((CELL_SIZE, 0.0), ParentType::L2, V2 {x: -0.0, y: 0.0 },color),Cell::new((CELL_SIZE, CELL_SIZE), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((CELL_SIZE, CELL_SIZE*2.0), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color)], piece: piece_type },
-            _ => Piece { pos: V2 {x: 0.0, y: 0.0}, cells: vec![], piece: piece_type },
+            ParentType::Block => Piece { pos: V2 {x: EDGE_X1 + CELL_SIZE, y: CELL_SIZE}, cells: vec![Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: (CELL_SIZE/2.0) }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: (CELL_SIZE/2.0) },color)], piece: piece_type },
+            ParentType::Line => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*2.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Line, V2 {x: -(CELL_SIZE*2.0), y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Line, V2 {x: -CELL_SIZE, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE*2.0, 0.0), ParentType::Line, V2 {x: 0.0, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE*3.0, 0.0), ParentType::Line, V2 {x: CELL_SIZE, y: 0.0 }, color)], piece: piece_type },
+            ParentType::L1 => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*1.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L1, V2 {x: -CELL_SIZE, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L1, V2 {x: -0.0, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color)], piece: piece_type },
+            ParentType::L2 => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L2, V2 {x: CELL_SIZE, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L2, V2 {x: -0.0, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color)], piece: piece_type },
+            _ => Piece { pos: V2 {x: EDGE_X1, y: EDGE_X1}, cells: vec![], piece: piece_type },
         }
     }
 
@@ -272,7 +272,7 @@ impl State {
                     None => canmove = true,
                 }
 
-                if c.hitbox.left() - CELL_SIZE < 0.0 {
+                if c.hitbox.left() - CELL_SIZE < EDGE_X1 {
                     canmove = false;
                     break;
                 }
