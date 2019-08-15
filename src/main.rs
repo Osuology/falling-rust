@@ -1,5 +1,6 @@
 extern crate rand;
 
+use ggez::graphics::Drawable;
 use ggez::event::KeyMods;
 use ggez::event::KeyCode;
 use ggez::*;
@@ -70,6 +71,7 @@ struct Cell {
     hitbox: ggez::graphics::Rect,
     parent: ParentType,
     color: ggez::graphics::Color,
+    shrink: bool,
 }
 
 impl Cell {
@@ -78,13 +80,21 @@ impl Cell {
         hitbox: ggez::graphics::Rect::new(position.0 + off.x - (CELL_SIZE/2.0), position.1 + off.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE),
         parent: parent,
         offset: off,
-        color: ggez::graphics::Color::new(set_color.0, set_color.1, set_color.2, 1.0)}
+        color: ggez::graphics::Color::new(set_color.0, set_color.1, set_color.2, 1.0),
+        shrink: false}
     }
 
     fn update(&mut self, pos: V2) -> GameResult {
         self.pos = pos + self.offset;
 
         self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE);
+
+        if self.shrink && self.hitbox.w > 0.0 {
+            self.hitbox.w -= 1.0;
+            self.hitbox.h -= 1.0;
+            self.hitbox.x += 1.0;
+            self.hitbox.y += 1.0;
+        }
 
         Ok(())
     }
@@ -241,6 +251,7 @@ struct State {
     blocks: Vec<Cell>,
     falling_piece: Piece,
     last_update: std::time::Instant,
+    tilemap: ggez::graphics::Image,
 }
 
 impl State {
@@ -345,11 +356,24 @@ impl ggez::event::EventHandler for State {
             c.update_hb().expect("Failed to update cells");
         }
 
+        for c in &mut self.blocks.iter().filter(|&x| x.pos.x == EDGE_X1 + (CELL_SIZE/2.0)) {
+            let &mut cells = &mut self.blocks.iter().filter(|&x| x.pos.y == c.pos.y);
+            let sum: usize = cells.count();
+            if sum > 9 {
+                for &mut j in &mut cells {
+                    j.shrink = true;
+                }
+                //TODO: Implement deletion, animation, and movement code
+            }
+        }
+
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         ggez::graphics::clear(ctx, ggez::graphics::BLACK);
+
+        self.tilemap.draw(ctx, (graphics::mint::Point2 {x: EDGE_X1, y: 0.0},).into())?;
 
         self.falling_piece.draw(ctx).expect("Failed to draw piece");
 
@@ -430,7 +454,8 @@ fn main() -> GameResult {
         .build()
         .unwrap();
 
-    let mut state = State { blocks: vec![], falling_piece: gen_piece(), last_update: std::time::Instant::now()};
+    let mut state = State { blocks: vec![], falling_piece: gen_piece(), last_update: std::time::Instant::now(),
+        tilemap: ggez::graphics::Image::new(ctx, "/tilemap.png").expect("poop")};
 
     event::run(ctx, event_loop, &mut state)
 }
