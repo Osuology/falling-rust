@@ -1,6 +1,6 @@
 [package]
-name = "tetris"
-version = "0.1.0"
+name = "falling-rust"
+version = "0.2.0"
 authors = ["osuology www.osuology.com"]
 edition = "2018"
 

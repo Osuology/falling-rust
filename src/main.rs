@@ -9,6 +9,12 @@ use std::{path, env};
 
 use rand::Rng;
 
+//Modules
+
+pub mod menu;
+
+use crate::menu::TextOption;
+
 //Constants
 
 const WINDOW_SIZE: (f32, f32) = (CELL_SIZE*29.0, CELL_SIZE*19.0);
@@ -26,9 +32,9 @@ const CELL_SIZE: f32 = 32.0;
 //Methods/Structs
 
 #[derive(Clone,Copy,PartialEq,Debug)]
-struct V2 {
-    x: f32,
-    y: f32,
+pub struct V2 {
+    pub x: f32,
+    pub y: f32,
 }
 
 impl std::ops::Sub for V2 {
@@ -90,8 +96,8 @@ impl Cell {
         self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE);
 
         if self.shrink && self.hitbox.w > 0.0 {
-            self.hitbox.w -= 1.0;
-            self.hitbox.h -= 1.0;
+            self.hitbox.w -= 2.0;
+            self.hitbox.h -= 2.0;
             self.hitbox.x += 1.0;
             self.hitbox.y += 1.0;
         }
@@ -247,11 +253,20 @@ impl Piece {
     }
 }
 
+enum GameState {
+    MainMenu,
+    Game,
+    PausedGame,
+}
+
 struct State {
     blocks: Vec<Cell>,
     falling_piece: Piece,
     last_update: std::time::Instant,
     tilemap: ggez::graphics::Image,
+    gameState: GameState,
+    options: Vec<TextOption>,
+    selected_option: Option<usize>,
 }
 
 impl State {
@@ -331,10 +346,13 @@ impl State {
 
         can
     }
-}
 
-impl ggez::event::EventHandler for State {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+    fn main_menu(&mut self) -> GameResult {
+
+        Ok(())
+    }
+
+    fn game(&mut self) -> GameResult {
         if std::time::Instant::now() - self.last_update >= std::time::Duration::from_millis(1000) {
             if self.can_move(PieceMove::Down) {
                 self.falling_piece.move_piece(PieceMove::Down).expect("Failed to use gravity");
@@ -357,22 +375,28 @@ impl ggez::event::EventHandler for State {
         }
 
         for c in &mut self.blocks.iter().filter(|&x| x.pos.x == EDGE_X1 + (CELL_SIZE/2.0)) {
-            let &mut cells = &mut self.blocks.iter().filter(|&x| x.pos.y == c.pos.y);
+            let mut cells = &mut self.blocks.iter().filter(|&x| x.pos.y == c.pos.y);
             let sum: usize = cells.count();
             if sum > 9 {
-                for &mut j in &mut cells {
+                /*for j in &mut cells {
                     j.shrink = true;
                 }
-                //TODO: Implement deletion, animation, and movement code
+                TODO: Implement deletion, animation, and movement code */
             }
         }
 
         Ok(())
     }
 
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        ggez::graphics::clear(ctx, ggez::graphics::BLACK);
+    fn draw_main_menu(&mut self, ctx: &mut Context) -> GameResult {
+        for o in &mut self.options {
+            o.draw(ctx).expect("Failed to draw text option");
+        }
 
+        Ok(())
+    }
+
+    fn draw_game(&mut self, ctx: &mut Context) -> GameResult {
         self.tilemap.draw(ctx, (graphics::mint::Point2 {x: EDGE_X1, y: 0.0},).into())?;
 
         self.falling_piece.draw(ctx).expect("Failed to draw piece");
@@ -381,24 +405,113 @@ impl ggez::event::EventHandler for State {
             cell.draw(ctx).expect("Failed to draw cell");
         }
 
-        ggez::graphics::present(ctx)
+        Ok(())
     }
 
-    fn key_down_event(
-        &mut self,
-        _ctx: &mut Context,
-        keycode: KeyCode,
-        _keymods: KeyMods,
-        _repeat: bool,
-    ) {
+    fn main_menu_keydown(&mut self, keycode: KeyCode, ctx: &mut Context) -> GameResult {
+        if keycode == KeyCode::Up {
+            match self.selected_option {
+                Some(s) => {
+                    self.options[s].unselect();
+
+                    if self.selected_option.unwrap() == 0 {
+                        self.selected_option = Some(self.options.iter().count() - 1);
+                    } else {
+                        self.selected_option = Some(self.selected_option.unwrap() - 1);
+                    }
+
+                    },
+                None => self.selected_option = Some(self.options.iter().count() - 1),
+            }
+
+            self.options[self.selected_option.unwrap()].select();
+        } else if keycode == KeyCode::Down {
+            match self.selected_option {
+                Some(s) => {
+                    self.options[s].unselect();
+
+                    if self.selected_option.unwrap() == self.options.iter().count() - 1 {
+                        self.selected_option = Some(0);
+                    } else {
+                        self.selected_option = Some(self.selected_option.unwrap() + 1);
+                    }
+                },
+                None => self.selected_option = Some(0),
+            }
+
+            self.options[self.selected_option.unwrap()].select();
+        }
+
+        if keycode == KeyCode::Return {
+            match self.selected_option {
+                None => (),
+                Some(num) => {
+                    if self.options[num].get_text() == "Play Game" {
+                        self.gameState = GameState::Game;
+                    } else if self.options[num].get_text() == "Exit Game" {
+                        ggez::event::quit(ctx);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn game_keydown(&mut self, keycode: KeyCode) -> GameResult {
         if keycode == KeyCode::Z && self.can_rotate(PieceMove::Right) {
             self.falling_piece.rotate(PieceMove::Right);
+        }
+
+        if keycode == KeyCode::Return {
+            self.gameState = GameState::PausedGame;
         }
 
         if let Some(dir) = PieceMove::from_keycode(keycode) {
             if dir != PieceMove::Up && self.can_move(dir) {
                 self.falling_piece.move_piece(dir).expect("Failed to move piece");
             }
+        }
+
+        Ok(())
+    }
+}
+
+impl ggez::event::EventHandler for State {
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        match self.gameState {
+            GameState::MainMenu => self.main_menu(),
+            GameState::Game => self.game(),
+            GameState::PausedGame => self.main_menu(),
+        }
+    }
+
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        ggez::graphics::clear(ctx, ggez::graphics::BLACK);
+
+        match self.gameState {
+            GameState::MainMenu => self.draw_main_menu(ctx).expect("Failed to draw main menu"),
+            GameState::Game => self.draw_game(ctx).expect("Failed to draw game"),
+            GameState::PausedGame => {
+                self.draw_game(ctx).expect("Failed to draw game");
+                self.draw_main_menu(ctx).expect("Failed to draw main menu")
+            }
+        };
+
+        ggez::graphics::present(ctx)
+    }
+
+    fn key_down_event(
+        &mut self,
+        ctx: &mut Context,
+        keycode: KeyCode,
+        _keymods: KeyMods,
+        _repeat: bool,
+    ) {
+        match self.gameState {
+            GameState::MainMenu => self.main_menu_keydown(keycode, ctx).expect("Failed to process key - main menu"),
+            GameState::Game => self.game_keydown(keycode).expect("Failed to process key - game"),
+            GameState::PausedGame => self.main_menu_keydown(keycode, ctx).expect("Failed to process key - main menu"),
         }
     }
 }
@@ -447,15 +560,19 @@ fn main() -> GameResult {
         path::PathBuf::from("./resources")
     };
 
-    let (ref mut ctx, ref mut event_loop) = ContextBuilder::new("Tetris", "Osuology")
+    let (ref mut ctx, ref mut event_loop) = ContextBuilder::new("Falling Rust", "Osuology")
         .add_resource_path(resource_dir)
-        .window_setup(ggez::conf::WindowSetup::default().title("Tetris"))
+        .window_setup(ggez::conf::WindowSetup::default().title("Falling Rust"))
         .window_mode(ggez::conf::WindowMode::default().dimensions(WINDOW_SIZE.0, WINDOW_SIZE.1))
         .build()
         .unwrap();
 
     let mut state = State { blocks: vec![], falling_piece: gen_piece(), last_update: std::time::Instant::now(),
-        tilemap: ggez::graphics::Image::new(ctx, "/tilemap.png").expect("poop")};
+        tilemap: ggez::graphics::Image::new(ctx, "/tilemap.png").expect("Failed to load bg image"), gameState: GameState::MainMenu,
+        options: vec![TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0}, "Play Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
+        TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0 + 64.0}, "Controls", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
+        TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0 + 128.0}, "Exit Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font"))],
+        selected_option: None};
 
     event::run(ctx, event_loop, &mut state)
 }
