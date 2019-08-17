@@ -263,10 +263,11 @@ struct State {
     blocks: Vec<Cell>,
     falling_piece: Piece,
     last_update: std::time::Instant,
-    tilemap: ggez::graphics::Image,
+    tilemap: graphics::Image,
     gameState: GameState,
     options: Vec<TextOption>,
     selected_option: Option<usize>,
+    logo: graphics::Image,
 }
 
 impl State {
@@ -392,6 +393,8 @@ impl State {
         for o in &mut self.options {
             o.draw(ctx).expect("Failed to draw text option");
         }
+
+        self.logo.draw(ctx, graphics::DrawParam::new().dest(mint::Point2 {x: 64.0, y: 64.0}).scale(graphics::mint::Point2 {x: 1.0, y: 1.0})).expect("Failed to draw logo");
 
         Ok(())
     }
@@ -572,7 +575,8 @@ fn main() -> GameResult {
         options: vec![TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0}, "Play Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
         TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0 + 64.0}, "Controls", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
         TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0 + 128.0}, "Exit Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font"))],
-        selected_option: None};
+        selected_option: None,
+        logo: graphics::Image::new(ctx, "/falling_rust_logo.png").expect("Failed to load logo")};
 
     event::run(ctx, event_loop, &mut state)
 }
