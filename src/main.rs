@@ -268,6 +268,9 @@ struct State {
     options: Vec<TextOption>,
     selected_option: Option<usize>,
     logo: graphics::Image,
+    logoMovement: V2,
+    logo_timer: f32,
+    logo_direction: bool,
 }
 
 impl State {
@@ -375,14 +378,19 @@ impl State {
             c.update_hb().expect("Failed to update cells");
         }
 
-        for c in &mut self.blocks.iter().filter(|&x| x.pos.x == EDGE_X1 + (CELL_SIZE/2.0)) {
-            let mut cells = &mut self.blocks.iter().filter(|&x| x.pos.y == c.pos.y);
-            let sum: usize = cells.count();
-            if sum > 9 {
-                /*for j in &mut cells {
-                    j.shrink = true;
+        for c in 0..self.blocks.iter().count() {
+            if self.blocks[c].pos.x - (CELL_SIZE/2.0) == EDGE_X1 {
+                let cell = self.blocks[c];
+                let sum: usize = self.blocks.clone().iter().filter(|&x| x.pos.y == cell.pos.y).count();
+                let mut cells = &mut self.blocks.iter_mut().filter(|x| x.pos.y == cell.pos.y);
+                println!("{}", format!("{}", sum));
+                if sum > 9 {
+                    println!("Line detected");
+                    for mut j in cells {
+                        j.shrink = true;
+                    }
+                    //TODO: Implement deletion, animation, and movement code
                 }
-                TODO: Implement deletion, animation, and movement code */
             }
         }
 
@@ -394,8 +402,27 @@ impl State {
             o.draw(ctx).expect("Failed to draw text option");
         }
 
-        self.logo.draw(ctx, graphics::DrawParam::new().dest(mint::Point2 {x: 64.0, y: 64.0}).scale(graphics::mint::Point2 {x: 1.0, y: 1.0})).expect("Failed to draw logo");
+        let delta = std::time::Instant::now() - self.last_update;
 
+        if self.logo_direction {
+            self.logo_timer += delta.as_millis() as f32;
+        } else {
+            self.logo_timer -= delta.as_millis() as f32;
+        }
+
+        if self.logo_timer > 3600.0 {
+            self.logo_direction = false;
+        } else if self.logo_timer < 0.0 {
+            self.logo_direction = true;
+        }
+
+        let offset_y = (self.logo_timer - 1800.0) / 120.0;
+
+        self.logo.draw(ctx, graphics::DrawParam::new().dest(mint::Point2 {x: 64.0 , y: 64.0 + offset_y}).scale(graphics::mint::Point2 {x: 1.0, y: 1.0})).expect("Failed to draw logo");
+
+
+
+        self.last_update = std::time::Instant::now();
         Ok(())
     }
 
@@ -576,7 +603,10 @@ fn main() -> GameResult {
         TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0 + 64.0}, "Controls", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
         TextOption::new(V2 {x: 0.0, y: WINDOW_SIZE.1 / 2.0 + 128.0}, "Exit Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font"))],
         selected_option: None,
-        logo: graphics::Image::new(ctx, "/falling_rust_logo.png").expect("Failed to load logo")};
+        logo: graphics::Image::new(ctx, "/falling_rust_logo.png").expect("Failed to load logo"),
+        logoMovement: V2 {x: 0.0, y: 0.0},
+        logo_timer: 0.0,
+        logo_direction: true};
 
     event::run(ctx, event_loop, &mut state)
 }
