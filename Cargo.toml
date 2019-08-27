@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 ggez = "0.5.1"
 rand = "0.7.0"
+
+[profile.dev]
+opt-level = 1
