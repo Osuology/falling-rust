@@ -78,6 +78,7 @@ struct Cell {
     parent: ParentType,
     color: ggez::graphics::Color,
     shrink: bool,
+    done: bool,
 }
 
 impl Cell {
@@ -87,7 +88,8 @@ impl Cell {
         parent: parent,
         offset: off,
         color: ggez::graphics::Color::new(set_color.0, set_color.1, set_color.2, 1.0),
-        shrink: false}
+        shrink: false,
+        done: false}
     }
 
     fn update(&mut self, pos: V2) -> GameResult {
@@ -95,18 +97,22 @@ impl Cell {
 
         self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE);
 
-        if self.shrink && self.hitbox.w > 0.0 {
-            self.hitbox.w -= 2.0;
-            self.hitbox.h -= 2.0;
-            self.hitbox.x += 1.0;
-            self.hitbox.y += 1.0;
-        }
+
 
         Ok(())
     }
 
     fn update_hb(&mut self) -> GameResult {
-        self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE);
+        self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), self.hitbox.w, self.hitbox.h);
+
+        if self.shrink && self.hitbox.w > 0.0 {
+            self.hitbox.w -= 2.0;
+            self.hitbox.h -= 2.0;
+            self.pos.x += 1.0;
+            self.pos.y += 1.0;
+        } else if self.hitbox.w <= 0.0 {
+            self.done = true;
+        }
 
         Ok(())
     }
@@ -376,14 +382,17 @@ impl State {
             if self.blocks[c].pos.x - (CELL_SIZE/2.0) == EDGE_X1 {
                 let cell = self.blocks[c];
                 let sum: usize = self.blocks.clone().iter().filter(|&x| x.pos.y == cell.pos.y).count();
-                let cells = &mut self.blocks.iter_mut().filter(|x| x.pos.y == cell.pos.y);
                 println!("{}", format!("{}", sum));
                 if sum > 9 {
                     println!("Line detected");
-                    for mut j in cells {
+                    for j in &mut self.blocks.iter_mut().filter(|x| x.pos.y == cell.pos.y).collect::<Vec<&mut Cell>>() {
                         j.shrink = true;
+
+                        if j.done == true {
+
+                        }
                     }
-                    //TODO: Implement deletion, animation, and movement code
+                    //TODO: Implement deletion, and movement code
                 }
             }
         }
