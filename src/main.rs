@@ -59,7 +59,7 @@ impl std::ops::Add for V2 {
     }
 }
 
-#[derive(Clone,Copy,PartialEq)]
+#[derive(Clone,Copy,PartialEq,Debug)]
 enum ParentType {
     L1,
     L2,
@@ -70,7 +70,7 @@ enum ParentType {
     Block,
 }
 
-#[derive(Copy,Clone,PartialEq)]
+#[derive(Copy,Clone,PartialEq,Debug)]
 struct Cell {
     pos: V2,
     offset: V2,
@@ -271,6 +271,7 @@ struct State {
     blocks: Vec<Cell>,
     falling_piece: Piece,
     last_update: std::time::Instant,
+    fps_update: std::time::Instant,
     tilemap: graphics::Image,
     game_state: GameState,
     previous_game_state: GameState,
@@ -361,6 +362,19 @@ impl State {
     }
 
     fn main_menu(&mut self) -> GameResult {
+        let delta = std::time::Instant::now() - self.last_update;
+
+        if self.logo_direction {
+            self.logo_timer += delta.as_millis() as f32;
+        } else {
+            self.logo_timer -= delta.as_millis() as f32;
+        }
+
+        if self.logo_timer > 3600.0 {
+            self.logo_direction = false;
+        } else if self.logo_timer < 0.0 {
+            self.logo_direction = true;
+        }
 
         Ok(())
     }
@@ -384,29 +398,30 @@ impl State {
         }
 
         for c in (0..self.blocks.iter().count()).rev() {
-            let blocks = &mut self.blocks.clone();
-            let cell = &mut self.blocks[c];
-            cell.update_hb().expect("Failed to update cells");
+            let mut blocks = self.blocks.clone();
+            blocks[c].update_hb().expect("Failed to update cells");
 
-            let index: usize = match blocks.iter().position(|x| *x == *cell) {
+            let index: usize = match blocks.iter().position(|x| *x == blocks[c]) {
                 Some(num) => num,
                 None => 0,
             };
 
-            if cell.done && index >= 1 {
-                /*for a in &mut self.blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x && x.pos.y > cell.pos.y).collect::<Vec<&mut Cell>>() {
+            let cell = blocks[c];
+            if blocks[c].done && index >= 0 {
+                for a in blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x - 16.0 && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
                     a.move_rel((0.0, CELL_SIZE));
-                }*/
+                    println!("debug");
+                }
 
-                self.blocks.remove(index);
+                blocks.remove(index);
             }
+            self.blocks = blocks;
         }
 
         for c in 0..self.blocks.iter().count() {
             if self.blocks[c].pos.x - (CELL_SIZE/2.0) == EDGE_X1 {
                 let cell = self.blocks[c];
                 let sum: usize = self.blocks.clone().iter().filter(|&x| x.pos.y == cell.pos.y).count();
-                println!("{}", format!("{}", sum));
                 if sum > 9 {
                     println!("Line detected");
                     for j in &mut self.blocks.iter_mut().filter(|x| x.pos.y == cell.pos.y).collect::<Vec<&mut Cell>>() {
@@ -421,20 +436,6 @@ impl State {
     }
 
     fn draw_main_menu(&mut self, ctx: &mut Context) -> GameResult {
-        let delta = std::time::Instant::now() - self.last_update;
-
-        if self.logo_direction {
-            self.logo_timer += delta.as_millis() as f32;
-        } else {
-            self.logo_timer -= delta.as_millis() as f32;
-        }
-
-        if self.logo_timer > 3600.0 {
-            self.logo_direction = false;
-        } else if self.logo_timer < 0.0 {
-            self.logo_direction = true;
-        }
-
         let offset_y = (self.logo_timer - 1800.0) / 120.0;
 
         self.bg.draw(ctx, graphics::DrawParam::new().dest(mint::Point2 {x: 0.0, y: 0.0}).scale(graphics::mint::Point2 {x: 1.0, y: 1.0})).expect("Failed to draw background");
@@ -464,6 +465,18 @@ impl State {
         for cell in &mut self.blocks {
             cell.draw(ctx).expect("Failed to draw cell");
         }
+
+        Ok(())
+    }
+
+    fn draw_controls(&mut self, ctx: &mut Context) -> GameResult {
+        self.bg.draw(ctx, graphics::DrawParam::new().dest(mint::Point2 {x: 0.0, y: 0.0}).scale(graphics::mint::Point2 {x: 1.0, y: 1.0})).expect("Failed to draw background");
+
+        let mut controls = graphics::Text::new("Press Z to rotate falling piece.\nPress Left/Right/Down to move falling piece.\nPress Escape to go back.");
+        controls.set_bounds(graphics::mint::Point2 {x: 940.0, y:1000.0}, graphics::Align::Center);
+        controls.set_font(graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to get font"), graphics::Scale::uniform(48.0));
+
+        graphics::draw(ctx, &controls,graphics::DrawParam::new().dest(graphics::mint::Point2 { x: 0.0, y: 213.0}).color(graphics::WHITE)).expect("Failed to draw text");
 
         Ok(())
     }
@@ -537,24 +550,35 @@ impl State {
 
         Ok(())
     }
+
+    fn control_keydown(&mut self, keycode: KeyCode) -> GameResult {
+        if keycode == KeyCode::Escape {
+            self.game_state = GameState::MainMenu;
+        }
+
+        Ok(())
+    }
 }
 
 impl ggez::event::EventHandler for State {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        match self.game_state {
-            GameState::MainMenu => self.main_menu(),
-            GameState::Game => {
-                if self.game_state != self.previous_game_state {
-                    self.falling_piece = gen_piece();
-                    self.blocks = Vec::new();
-                }
-                self.game()
-            },
-            GameState::PausedGame => self.main_menu(),
-            GameState::Controls => Ok(()),
-        };
+        if std::time::Instant::now() - self.fps_update >= std::time::Duration::from_millis(17) {
+            match self.game_state {
+                GameState::MainMenu => self.main_menu(),
+                GameState::Game => {
+                    if self.game_state != self.previous_game_state {
+                        self.falling_piece = gen_piece();
+                        self.blocks = Vec::new();
+                    }
+                    self.game()
+                },
+                GameState::PausedGame => self.main_menu(),
+                GameState::Controls => Ok(()),
+            };
 
-        self.previous_game_state = self.game_state;
+            self.previous_game_state = self.game_state;
+            self.fps_update = std::time::Instant::now();
+        }
         Ok(())
     }
 
@@ -568,7 +592,7 @@ impl ggez::event::EventHandler for State {
                 self.draw_game(ctx).expect("Failed to draw game");
                 self.draw_main_menu(ctx).expect("Failed to draw main menu")
             },
-            GameState::Controls => (),
+            GameState::Controls => self.draw_controls(ctx).expect("Failed to draw controls"),
         };
 
         ggez::graphics::present(ctx)
@@ -585,7 +609,7 @@ impl ggez::event::EventHandler for State {
             GameState::MainMenu => self.main_menu_keydown(keycode, ctx).expect("Failed to process key - main menu"),
             GameState::Game => self.game_keydown(keycode).expect("Failed to process key - game"),
             GameState::PausedGame => self.main_menu_keydown(keycode, ctx).expect("Failed to process key - main menu"),
-            GameState::Controls => (),
+            GameState::Controls => self.control_keydown(keycode).expect("Failed to process key - controls"),
         }
     }
 }
@@ -645,6 +669,7 @@ fn main() -> GameResult {
         .unwrap();
 
     let mut state = State { blocks: vec![], falling_piece: gen_piece(), last_update: std::time::Instant::now(),
+        fps_update: std::time::Instant::now(),
         tilemap: ggez::graphics::Image::new(ctx, "/tilemap.png").expect("Failed to load bg image"),
         previous_game_state: GameState::MainMenu,
         game_state: GameState::MainMenu,
