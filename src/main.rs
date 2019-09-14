@@ -19,13 +19,24 @@ use crate::menu::TextOption;
 
 const WINDOW_SIZE: (f32, f32) = (CELL_SIZE*29.0, CELL_SIZE*19.0);
 
-const YELLOW: (f32, f32, f32) = (1.0, 1.0, 0.0);
-const BLUE: (f32, f32, f32) = (0.0, 0.0, 1.0);
-const RED: (f32, f32, f32) = (1.0, 0.0, 0.0);
-const GREEN: (f32, f32, f32) = (0.0, 1.0, 0.0);
+/*const YELLOW: (f32, f32, f32) = (157.0/255.0, 97.0/255.0, 175.0/255.0);
+const BLUE: (f32, f32, f32) = (66.0/255.0, 84.0/255.0, 193.0/255.0);
+const RED: (f32, f32, f32) = (218.0/255.0, 220.0/255.0, 38.0/255.0);
+const GREEN: (f32, f32, f32) = (37.0/255.0, 199.0/255.0, 75.0/255.0);*/
+
+const YELLOW: (f32, f32, f32) = (161.0/255.0, 122.0/255.0, 13.0/255.0);
+const BLUE: (f32, f32, f32) = (157.0/255.0, 7.0/255.0, 81.0/255.0);
+const RED: (f32, f32, f32) = (171.0/255.0, 29.0/255.0, 118.0/255.0);
+const GREEN: (f32, f32, f32) = (161.0/255.0, 73.0/255.0, 14.0/255.0);
+
+const YELLOW_B: (f32, f32, f32) = (195.0/255.0, 175.0/255.0, 38.0/255.0);
+const BLUE_B: (f32, f32, f32) = (202.0/255.0, 58.0/255.0, 126.0/255.0);
+const RED_B: (f32, f32, f32) = (192.0/255.0, 46.0/255.0, 135.0/255.0);
+const GREEN_B: (f32, f32, f32) = (188.0/255.0, 123.0/255.0, 41.0/255.0);
 
 const EDGE_X1: f32 = CELL_SIZE*9.0;
 const EDGE_X2: f32 = EDGE_X1 + CELL_SIZE*10.0;
+const EDGE_X3: f32 = EDGE_X1 + CELL_SIZE*5.0;
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -77,17 +88,19 @@ struct Cell {
     hitbox: ggez::graphics::Rect,
     parent: ParentType,
     color: ggez::graphics::Color,
+    back_color: ggez::graphics::Color,
     shrink: bool,
     done: bool,
 }
 
 impl Cell {
-    fn new(position: (f32, f32), parent: ParentType, off: V2, set_color: (f32, f32, f32)) -> Self {
+    fn new(position: (f32, f32), parent: ParentType, off: V2, set_color: (f32, f32, f32), set_back_color: (f32, f32, f32)) -> Self {
         Cell { pos: V2 {x: position.0 + off.x, y: position.1 + off.y},
         hitbox: ggez::graphics::Rect::new(position.0 + off.x - (CELL_SIZE/2.0), position.1 + off.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE),
         parent: parent,
         offset: off,
         color: ggez::graphics::Color::new(set_color.0, set_color.1, set_color.2, 1.0),
+        back_color: ggez::graphics::Color::new(set_back_color.0, set_back_color.1, set_back_color.2, 1.0),
         shrink: false,
         done: false}
     }
@@ -127,7 +140,7 @@ impl Cell {
             ctx,
             graphics::DrawMode::fill(),
             self.hitbox,
-            [0.7, 0.7, 0.7, 1.0].into()
+            self.back_color.into()
             )?;
 
         graphics::draw(ctx, &rec, (ggez::mint::Point2 {x: 0.0, y: 0.0},))?;
@@ -171,29 +184,20 @@ struct Piece {
     pos: V2,
     cells: Vec<Cell>,
     piece: ParentType,
+    moved_down: bool,
 }
 
 impl Piece {
-    fn new(piece_type: ParentType, color: (f32, f32, f32)) -> Self {
+    fn new(piece_type: ParentType, color: (f32, f32, f32), back_color: (f32, f32, f32)) -> Self {
         match piece_type {
-            ParentType::Block => Piece { pos: V2 {x: EDGE_X1 + CELL_SIZE, y: CELL_SIZE}, cells: vec![Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: (CELL_SIZE/2.0) }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: (CELL_SIZE/2.0) },color)], piece: piece_type },
-            ParentType::Line => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*2.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Line, V2 {x: -(CELL_SIZE*2.0), y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Line, V2 {x: -CELL_SIZE, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE*2.0, 0.0), ParentType::Line, V2 {x: 0.0, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE*3.0, 0.0), ParentType::Line, V2 {x: CELL_SIZE, y: 0.0 }, color)], piece: piece_type },
-            ParentType::L1 => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*1.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L1, V2 {x: -CELL_SIZE, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L1, V2 {x: -0.0, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color)], piece: piece_type },
-            ParentType::L2 => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L2, V2 {x: CELL_SIZE, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L2, V2 {x: -0.0, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color)], piece: piece_type },
-            ParentType::T => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*1.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::T, V2 {x: 0.0, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::T, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::T, V2 {x: CELL_SIZE, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::T, V2 {x: -CELL_SIZE, y: CELL_SIZE }, color)], piece: piece_type },
-            ParentType::Z1 => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*1.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Z1, V2 {x: 0.0, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Z1, V2 {x: CELL_SIZE, y: 0.0 },color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Z1, V2 {x: CELL_SIZE, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::Z1, V2 {x: CELL_SIZE*2.0, y: CELL_SIZE }, color)], piece: piece_type },
-            ParentType::Z2 => Piece { pos: V2 {x: EDGE_X1 + (CELL_SIZE*1.5), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Z2, V2 {x: 0.0, y: CELL_SIZE }, color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Z2, V2 {x: CELL_SIZE, y: CELL_SIZE },color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Z2, V2 {x: CELL_SIZE, y: 0.0 }, color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::Z2, V2 {x: CELL_SIZE*2.0, y: 0.0 }, color)], piece: piece_type },
+            ParentType::Block => Piece { pos: V2 {x: EDGE_X3, y: CELL_SIZE}, cells: vec![Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: (CELL_SIZE/2.0) }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: (CELL_SIZE/2.0) },color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::Line => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Line, V2 {x: -(CELL_SIZE*2.0), y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Line, V2 {x: -CELL_SIZE, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE*2.0, 0.0), ParentType::Line, V2 {x: 0.0, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE*3.0, 0.0), ParentType::Line, V2 {x: CELL_SIZE, y: 0.0 }, color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::L1 => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L1, V2 {x: -CELL_SIZE, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L1, V2 {x: -0.0, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::L2 => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L2, V2 {x: CELL_SIZE, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L2, V2 {x: -0.0, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::T => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::T, V2 {x: 0.0, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::T, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::T, V2 {x: CELL_SIZE, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::T, V2 {x: -CELL_SIZE, y: CELL_SIZE }, color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::Z1 => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Z1, V2 {x: 0.0, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Z1, V2 {x: CELL_SIZE, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Z1, V2 {x: CELL_SIZE, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::Z1, V2 {x: CELL_SIZE*2.0, y: CELL_SIZE }, color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::Z2 => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Z2, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Z2, V2 {x: CELL_SIZE, y: CELL_SIZE },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Z2, V2 {x: CELL_SIZE, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::Z2, V2 {x: CELL_SIZE*2.0, y: 0.0 }, color, back_color)], piece: piece_type, moved_down: false },
         }
-    }
-
-    fn move_to(&mut self, position: V2) -> GameResult {
-        for c in self.cells.iter_mut() {
-            c.pos = position + c.offset;
-        }
-
-        self.pos = position;
-
-        Ok(())
     }
 
     fn rotate(&mut self, dir: PieceMove) {
@@ -237,6 +241,8 @@ impl Piece {
                 for c in &mut self.cells {
                     c.pos.y += CELL_SIZE;
                 }
+
+                self.moved_down = true;
             },
             PieceMove::Up => (),
             PieceMove::Left => {
@@ -265,6 +271,7 @@ enum GameState {
     Game,
     PausedGame,
     Controls,
+    GameOver,
 }
 
 struct State {
@@ -281,6 +288,9 @@ struct State {
     logo: graphics::Image,
     logo_timer: f32,
     logo_direction: bool,
+    pause_options: Vec<TextOption>,
+    pause_select: Option<usize>,
+    rate: u32
 }
 
 impl State {
@@ -380,13 +390,22 @@ impl State {
     }
 
     fn game(&mut self) -> GameResult {
-        if std::time::Instant::now() - self.last_update >= std::time::Duration::from_millis(1000) {
+        if std::time::Instant::now() - self.last_update >= std::time::Duration::from_millis(self.rate.into()) {
+            self.rate -= 3;
+            if (self.rate < 250) {
+                self.rate = 250;
+            }
+
             if self.can_move(PieceMove::Down) {
                 self.falling_piece.move_piece(PieceMove::Down).expect("Failed to use gravity");
             } else if !self.can_move(PieceMove::Down) {
-                let copy = &mut self.falling_piece.cells;
-                self.blocks.append(copy);
-                self.falling_piece = gen_piece();
+                if self.falling_piece.moved_down == false {
+                    self.game_state = GameState::GameOver;
+                } else {
+                    let copy = &mut self.falling_piece.cells;
+                    self.blocks.append(copy);
+                    self.falling_piece = gen_piece();
+                }
             }
 
             self.last_update = std::time::Instant::now();
@@ -407,10 +426,9 @@ impl State {
             };
 
             let cell = blocks[c];
-            if blocks[c].done && index >= 0 {
+            if blocks[c].done {
                 for a in blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x - 16.0 && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
                     a.move_rel((0.0, CELL_SIZE));
-                    println!("debug");
                 }
 
                 blocks.remove(index);
@@ -423,14 +441,23 @@ impl State {
                 let cell = self.blocks[c];
                 let sum: usize = self.blocks.clone().iter().filter(|&x| x.pos.y == cell.pos.y).count();
                 if sum > 9 {
-                    println!("Line detected");
                     for j in &mut self.blocks.iter_mut().filter(|x| x.pos.y == cell.pos.y).collect::<Vec<&mut Cell>>() {
                         j.shrink = true;
                     }
-                    //TODO: Implement movement code
                 }
             }
         }
+
+        Ok(())
+    }
+
+    fn paused(&mut self) -> GameResult {
+
+
+        Ok(())
+    }
+
+    fn game_over(&mut self) -> GameResult {
 
         Ok(())
     }
@@ -477,6 +504,26 @@ impl State {
         controls.set_font(graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to get font"), graphics::Scale::uniform(48.0));
 
         graphics::draw(ctx, &controls,graphics::DrawParam::new().dest(graphics::mint::Point2 { x: 0.0, y: 213.0}).color(graphics::WHITE)).expect("Failed to draw text");
+
+        Ok(())
+    }
+
+    fn draw_pause(&mut self, ctx: &mut Context) -> GameResult {
+        for o in &mut self.pause_options {
+            o.draw(ctx).expect("Failed to draw pause options");
+        }
+
+        Ok(())
+    }
+
+    fn draw_game_over(&mut self, ctx: &mut Context) -> GameResult {
+        self.bg.draw(ctx, graphics::DrawParam::new().dest(mint::Point2 {x: 0.0, y: 0.0}).scale(graphics::mint::Point2 {x: 1.0, y: 1.0})).expect("Failed to draw background");
+
+        let mut gameover = graphics::Text::new("Game Over!\nPress R to retry\nPress Escape to go to main menu");
+        gameover.set_bounds(graphics::mint::Point2 {x: 940.0, y:1000.0}, graphics::Align::Center);
+        gameover.set_font(graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to get font"), graphics::Scale::uniform(88.0));
+
+        graphics::draw(ctx, &gameover,graphics::DrawParam::new().dest(graphics::mint::Point2 { x: 0.0, y: 163.0}).color(graphics::WHITE)).expect("Failed to draw text");
 
         Ok(())
     }
@@ -558,23 +605,109 @@ impl State {
 
         Ok(())
     }
+
+    fn paused_keydown(&mut self, keycode: KeyCode) -> GameResult {
+        if keycode == KeyCode::Up {
+            match self.pause_select {
+                Some(s) => {
+                    self.pause_options[s].unselect();
+
+                    if self.pause_select.unwrap() == 0 {
+                        self.pause_select = Some(self.pause_options.iter().count() - 1);
+                    } else {
+                        self.pause_select = Some(self.pause_select.unwrap() - 1);
+                    }
+
+                    },
+                None => self.pause_select = Some(self.pause_options.iter().count() - 1),
+            }
+
+            self.pause_options[self.pause_select.unwrap()].select();
+        } else if keycode == KeyCode::Down {
+            match self.pause_select {
+                Some(s) => {
+                    self.pause_options[s].unselect();
+
+                    if self.pause_select.unwrap() == self.pause_options.iter().count() - 1 {
+                        self.pause_select = Some(0);
+                    } else {
+                        self.pause_select = Some(self.pause_select.unwrap() + 1);
+                    }
+                },
+                None => self.pause_select = Some(0),
+            }
+
+            self.pause_options[self.pause_select.unwrap()].select();
+        }
+
+        if keycode == KeyCode::Return {
+
+            match self.pause_select {
+                None => (),
+                Some(num) => {
+                    if self.pause_options[num].get_text() == "Resume Game" {
+                        self.game_state = GameState::Game;
+                        self.previous_game_state = GameState::Game;
+                    } else if self.pause_options[num].get_text() == "Restart Game" {
+                        self.game_state = GameState::Game;
+                    }
+                    else if self.pause_options[num].get_text() == "Exit to Main Menu" {
+                        self.game_state = GameState::MainMenu;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn game_over_keydown(&mut self, keycode: KeyCode) -> GameResult {
+        if keycode == KeyCode::Escape {
+            self.game_state = GameState::MainMenu;
+        } else if keycode == KeyCode::R {
+            self.game_state = GameState::Game;
+        }
+
+        Ok(())
+    }
 }
 
 impl ggez::event::EventHandler for State {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         if std::time::Instant::now() - self.fps_update >= std::time::Duration::from_millis(17) {
             match self.game_state {
-                GameState::MainMenu => self.main_menu(),
+                GameState::MainMenu => {
+                    if self.game_state != self.previous_game_state {
+                        self.logo_timer = 0.0;
+                        if self.selected_option != None {
+                            self.options[self.selected_option.unwrap()].unselect();
+                        }
+                        self.selected_option = None;
+                    }
+
+                    self.main_menu()
+                },
                 GameState::Game => {
                     if self.game_state != self.previous_game_state {
                         self.falling_piece = gen_piece();
                         self.blocks = Vec::new();
+                        self.rate = 1000;
                     }
                     self.game()
                 },
-                GameState::PausedGame => self.main_menu(),
+                GameState::PausedGame => {
+                    if self.game_state != self.previous_game_state {
+                        if self.pause_select != None {
+                            self.pause_options[self.pause_select.unwrap()].unselect();
+                        }
+                        self.pause_select = None;
+                    }
+
+                    self.paused()
+                },
                 GameState::Controls => Ok(()),
-            };
+                GameState::GameOver => self.game_over(),
+            }.expect("Failed to update");
 
             self.previous_game_state = self.game_state;
             self.fps_update = std::time::Instant::now();
@@ -590,9 +723,10 @@ impl ggez::event::EventHandler for State {
             GameState::Game => self.draw_game(ctx).expect("Failed to draw game"),
             GameState::PausedGame => {
                 self.draw_game(ctx).expect("Failed to draw game");
-                self.draw_main_menu(ctx).expect("Failed to draw main menu")
+                self.draw_pause(ctx).expect("Failed to draw pause menu");
             },
             GameState::Controls => self.draw_controls(ctx).expect("Failed to draw controls"),
+            GameState::GameOver => self.draw_game_over(ctx).expect("Failed to draw game over"),
         };
 
         ggez::graphics::present(ctx)
@@ -608,8 +742,9 @@ impl ggez::event::EventHandler for State {
         match self.game_state {
             GameState::MainMenu => self.main_menu_keydown(keycode, ctx).expect("Failed to process key - main menu"),
             GameState::Game => self.game_keydown(keycode).expect("Failed to process key - game"),
-            GameState::PausedGame => self.main_menu_keydown(keycode, ctx).expect("Failed to process key - main menu"),
+            GameState::PausedGame => self.paused_keydown(keycode).expect("Failed to process key - pause menu"),
             GameState::Controls => self.control_keydown(keycode).expect("Failed to process key - controls"),
+            GameState::GameOver => self.game_over_keydown(keycode).expect("Failed to process key - game_over"),
         }
     }
 }
@@ -626,8 +761,23 @@ fn gen_color() -> (f32, f32, f32) {
     }
 }
 
+fn gen_backcolor(matchcolor: (f32, f32, f32)) -> (f32, f32, f32) {
+    if matchcolor == YELLOW {
+        YELLOW_B
+    } else if matchcolor == BLUE {
+        BLUE_B
+    } else if matchcolor == RED {
+        RED_B
+    } else if matchcolor == GREEN {
+        GREEN_B
+    } else {
+        (0.0, 0.0, 0.0)
+    }
+}
+
 fn gen_piece() -> Piece {
     let color = gen_color();
+    let backcolor = gen_backcolor(color);
 
     let rng = rand::thread_rng().gen_range(0, 7);
 
@@ -642,7 +792,7 @@ fn gen_piece() -> Piece {
         _ => ParentType::Block,
     };
 
-    Piece::new(piecetype, color)
+    Piece::new(piecetype, color, backcolor)
 }
 
 fn main() -> GameResult {
@@ -680,7 +830,12 @@ fn main() -> GameResult {
         bg: graphics::Image::new(ctx, "/bg_2.png").expect("Failed to load /bg_2.png"),
         logo: graphics::Image::new(ctx, "/falling_rust_logo.png").expect("Failed to load logo"),
         logo_timer: 0.0,
-        logo_direction: true};
+        logo_direction: true,
+        pause_options: vec![TextOption::new(V2 {x: -8.0, y: WINDOW_SIZE.1 / 2.0}, "Resume Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
+        TextOption::new(V2 {x: -8.0, y: WINDOW_SIZE.1 / 2.0 + 64.0}, "Restart Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
+        TextOption::new(V2 {x: -8.0, y: WINDOW_SIZE.1 / 2.0 + 128.0}, "Exit to Main Menu", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font"))],
+        pause_select: None,
+        rate: 1000};
 
     ggez::input::mouse::set_cursor_hidden(ctx, true);
 
