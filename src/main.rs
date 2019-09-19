@@ -656,6 +656,9 @@ impl State {
                     }
                 }
             }
+        } else if keycode == KeyCode::Escape {
+            self.game_state = GameState::Game;
+            self.previous_game_state = GameState::Game;
         }
 
         Ok(())
@@ -817,6 +820,8 @@ fn main() -> GameResult {
         .window_mode(ggez::conf::WindowMode::default().dimensions(WINDOW_SIZE.0, WINDOW_SIZE.1))
         .build()
         .unwrap();
+
+    graphics::set_default_filter(ctx, graphics::FilterMode::Nearest);
 
     let mut state = State { blocks: vec![], falling_piece: gen_piece(), last_update: std::time::Instant::now(),
         fps_update: std::time::Instant::now(),
