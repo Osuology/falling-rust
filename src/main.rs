@@ -1,8 +1,11 @@
+#![windows_subsystem = "windows"]
+
 extern crate rand;
 
 use ggez::graphics::Drawable;
 use ggez::event::KeyMods;
 use ggez::event::KeyCode;
+use ggez::audio::SoundSource;
 use ggez::*;
 
 use std::{path, env};
@@ -191,7 +194,7 @@ impl Piece {
     fn new(piece_type: ParentType, color: (f32, f32, f32), back_color: (f32, f32, f32)) -> Self {
         match piece_type {
             ParentType::Block => Piece { pos: V2 {x: EDGE_X3, y: CELL_SIZE}, cells: vec![Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: -(CELL_SIZE/2.0) }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: -(CELL_SIZE/2.0), y: (CELL_SIZE/2.0) }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::Block, V2 {x: (CELL_SIZE/2.0), y: (CELL_SIZE/2.0) },color, back_color)], piece: piece_type, moved_down: false },
-            ParentType::Line => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Line, V2 {x: -(CELL_SIZE*2.0), y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Line, V2 {x: -CELL_SIZE, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE*2.0, 0.0), ParentType::Line, V2 {x: 0.0, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE*3.0, 0.0), ParentType::Line, V2 {x: CELL_SIZE, y: 0.0 }, color, back_color)], piece: piece_type, moved_down: false },
+            ParentType::Line => Piece { pos: V2 {x: EDGE_X3 + (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::Line, V2 {x: -(CELL_SIZE*2.0), y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::Line, V2 {x: -CELL_SIZE, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE*2.0, 0.0), ParentType::Line, V2 {x: 0.0, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE*3.0, 0.0), ParentType::Line, V2 {x: CELL_SIZE, y: 0.0 }, color, back_color)], piece: piece_type, moved_down: false },
             ParentType::L1 => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L1, V2 {x: -CELL_SIZE, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L1, V2 {x: -0.0, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L1, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color, back_color)], piece: piece_type, moved_down: false },
             ParentType::L2 => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::L2, V2 {x: CELL_SIZE, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, 0.0), ParentType::L2, V2 {x: -0.0, y: 0.0 },color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::L2, V2 {x: 0.0, y: CELL_SIZE*2.0 }, color, back_color)], piece: piece_type, moved_down: false },
             ParentType::T => Piece { pos: V2 {x: EDGE_X3 - (CELL_SIZE/2.0), y: (CELL_SIZE/2.0)}, cells: vec![Cell::new((EDGE_X1, 0.0), ParentType::T, V2 {x: 0.0, y: 0.0 }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE), ParentType::T, V2 {x: 0.0, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::T, V2 {x: CELL_SIZE, y: CELL_SIZE }, color, back_color),Cell::new((EDGE_X1 + CELL_SIZE, CELL_SIZE*2.0), ParentType::T, V2 {x: -CELL_SIZE, y: CELL_SIZE }, color, back_color)], piece: piece_type, moved_down: false },
@@ -290,7 +293,12 @@ struct State {
     logo_direction: bool,
     pause_options: Vec<TextOption>,
     pause_select: Option<usize>,
-    rate: u32
+    rate: u32,
+    move_sound: ggez::audio::Source,
+    rotate_sound: ggez::audio::Source,
+    land_sound: ggez::audio::Source,
+    line_sound: ggez::audio::Source,
+    music: ggez::audio::Source,
 }
 
 impl State {
@@ -405,6 +413,11 @@ impl State {
                     let copy = &mut self.falling_piece.cells;
                     self.blocks.append(copy);
                     self.falling_piece = gen_piece();
+
+                    if self.land_sound.stopped() {
+                        self.land_sound.set_volume(0.06);
+                        self.land_sound.play();
+                    }
                 }
             }
 
@@ -427,6 +440,11 @@ impl State {
 
             let cell = blocks[c];
             if blocks[c].done {
+                if (self.line_sound.stopped()){
+                    self.line_sound.set_volume(0.06);
+                    self.line_sound.play();
+                }
+                
                 for a in blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x - 16.0 && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
                     a.move_rel((0.0, CELL_SIZE));
                 }
@@ -583,6 +601,10 @@ impl State {
     fn game_keydown(&mut self, keycode: KeyCode) -> GameResult {
         if keycode == KeyCode::Z && self.can_rotate(PieceMove::Right) {
             self.falling_piece.rotate(PieceMove::Right);
+                if (self.rotate_sound.stopped()){
+                    self.rotate_sound.set_volume(0.06);
+                    self.rotate_sound.play();
+                }
         }
 
         if keycode == KeyCode::Escape {
@@ -592,6 +614,10 @@ impl State {
         if let Some(dir) = PieceMove::from_keycode(keycode) {
             if dir != PieceMove::Up && self.can_move(dir) {
                 self.falling_piece.move_piece(dir).expect("Failed to move piece");
+                if (self.move_sound.stopped()){
+                    self.move_sound.set_volume(0.06);
+                    self.move_sound.play();
+                }
             }
         }
 
@@ -686,6 +712,10 @@ impl ggez::event::EventHandler for State {
                             self.options[self.selected_option.unwrap()].unselect();
                         }
                         self.selected_option = None;
+
+                        if self.previous_game_state == GameState::Game {
+                            self.music.stop();
+                        }
                     }
 
                     self.main_menu()
@@ -695,7 +725,15 @@ impl ggez::event::EventHandler for State {
                         self.falling_piece = gen_piece();
                         self.blocks = Vec::new();
                         self.rate = 1000;
+                        self.music.set_repeat(true);
+                        self.music.set_volume(0.01);
+                        self.music.play();
                     }
+
+                    if self.music.paused() {
+                        self.music.resume();
+                    }
+
                     self.game()
                 },
                 GameState::PausedGame => {
@@ -704,12 +742,25 @@ impl ggez::event::EventHandler for State {
                             self.pause_options[self.pause_select.unwrap()].unselect();
                         }
                         self.pause_select = None;
+
+                        if self.previous_game_state == GameState::Game {
+                            self.music.pause();
+                        }
                     }
 
                     self.paused()
                 },
-                GameState::Controls => Ok(()),
-                GameState::GameOver => self.game_over(),
+                GameState::Controls => {
+                    if self.previous_game_state == GameState::Game {
+                        self.music.stop();
+                    }
+
+                    Ok(())},
+                GameState::GameOver => {
+                    self.music.stop();
+
+                    self.game_over()
+                    },
             }.expect("Failed to update");
 
             self.previous_game_state = self.game_state;
@@ -816,7 +867,7 @@ fn main() -> GameResult {
 
     let (ref mut ctx, ref mut event_loop) = ContextBuilder::new("Falling Rust", "Osuology")
         .add_resource_path(resource_dir)
-        .window_setup(ggez::conf::WindowSetup::default().title("Falling Rust"))
+        .window_setup(ggez::conf::WindowSetup::default().title("Falling Rust").icon("/icon.ico"))
         .window_mode(ggez::conf::WindowMode::default().dimensions(WINDOW_SIZE.0, WINDOW_SIZE.1))
         .build()
         .unwrap();
@@ -840,7 +891,12 @@ fn main() -> GameResult {
         TextOption::new(V2 {x: -8.0, y: WINDOW_SIZE.1 / 2.0 + 64.0}, "Restart Game", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font")),
         TextOption::new(V2 {x: -8.0, y: WINDOW_SIZE.1 / 2.0 + 128.0}, "Exit to Main Menu", graphics::Font::new(ctx, "/VLOBJ_bold.ttf").expect("Failed to load font"))],
         pause_select: None,
-        rate: 1000};
+        rate: 1000,
+        move_sound: ggez::audio::Source::new(ctx, "/move.wav").expect("Failed to load sound effect"),
+        rotate_sound: ggez::audio::Source::new(ctx, "/rotate.wav").expect("Failed to load sound effect"),
+        land_sound: ggez::audio::Source::new(ctx, "/land.wav").expect("Failed to load sound effect"),
+        line_sound: ggez::audio::Source::new(ctx, "/line.wav").expect("Failed to load sound effect"),
+        music: ggez::audio::Source::new(ctx, "/music.mp3").expect("Failed to load music")};
 
     ggez::input::mouse::set_cursor_hidden(ctx, true);
 
