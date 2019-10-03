@@ -1,5 +1,7 @@
 #![windows_subsystem = "windows"]
 
+//Fix the bug with line deletion where tiles merge weirdly (the top tile probably isn't moving down for some reason)
+
 extern crate rand;
 
 use ggez::graphics::Drawable;
