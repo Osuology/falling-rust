@@ -896,7 +896,7 @@ fn main() -> GameResult {
         rotate_sound: ggez::audio::Source::new(ctx, "/rotate.wav").expect("Failed to load sound effect"),
         land_sound: ggez::audio::Source::new(ctx, "/land.wav").expect("Failed to load sound effect"),
         line_sound: ggez::audio::Source::new(ctx, "/line.wav").expect("Failed to load sound effect"),
-        music: ggez::audio::Source::new(ctx, "/music.mp3").expect("Failed to load music")};
+        music: ggez::audio::Source::new(ctx, "/music.wav").expect("Failed to load music")};
 
     ggez::input::mouse::set_cursor_hidden(ctx, true);
 
