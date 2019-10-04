@@ -449,6 +449,8 @@ impl State {
                 
                 for a in blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x - 16.0 && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
                     a.move_rel((0.0, CELL_SIZE));
+                    //bug may be fixed by following line:
+                    a.update_hb();
                 }
 
                 blocks.remove(index);
