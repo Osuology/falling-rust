@@ -726,7 +726,7 @@ impl ggez::event::EventHandler for State {
                         self.blocks = Vec::new();
                         self.rate = 1000;
                         self.music.set_repeat(true);
-                        self.music.set_volume(0.01);
+                        self.music.set_volume(0.02);
                         self.music.play();
                     }
 
