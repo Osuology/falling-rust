@@ -1,6 +1,7 @@
 #![windows_subsystem = "windows"]
 
 //Fix the bug with line deletion where tiles merge weirdly (the top tile probably isn't moving down for some reason)
+//confirmed: bug is caused by last block not actually moving down, was confirmed in master branch, two blocks are merging onto the same line, causing a significant bug
 
 extern crate rand;
 
