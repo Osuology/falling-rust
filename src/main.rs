@@ -403,7 +403,7 @@ impl State {
     fn game(&mut self) -> GameResult {
         if std::time::Instant::now() - self.last_update >= std::time::Duration::from_millis(self.rate.into()) {
             self.rate -= 3;
-            if (self.rate < 250) {
+            if self.rate < 250 {
                 self.rate = 250;
             }
 
@@ -419,7 +419,7 @@ impl State {
 
                     if self.land_sound.stopped() {
                         self.land_sound.set_volume(0.06);
-                        self.land_sound.play();
+                        self.land_sound.play().expect("Failed to play sound");
                     }
                 }
             }
@@ -443,9 +443,9 @@ impl State {
 
             let cell = blocks[c];
             if blocks[c].done {
-                if (self.line_sound.stopped()){
+                if self.line_sound.stopped() {
                     self.line_sound.set_volume(0.06);
-                    self.line_sound.play();
+                    self.line_sound.play().expect("Failed to play line sound");
                 }
                 
                 for a in blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x - 16.0 && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
@@ -606,9 +606,9 @@ impl State {
     fn game_keydown(&mut self, keycode: KeyCode) -> GameResult {
         if keycode == KeyCode::Z && self.can_rotate(PieceMove::Right) {
             self.falling_piece.rotate(PieceMove::Right);
-                if (self.rotate_sound.stopped()){
+                if self.rotate_sound.stopped() {
                     self.rotate_sound.set_volume(0.06);
-                    self.rotate_sound.play();
+                    self.rotate_sound.play().expect("Failed to play rotate sound");
                 }
         }
 
@@ -619,9 +619,9 @@ impl State {
         if let Some(dir) = PieceMove::from_keycode(keycode) {
             if dir != PieceMove::Up && self.can_move(dir) {
                 self.falling_piece.move_piece(dir).expect("Failed to move piece");
-                if (self.move_sound.stopped()){
+                if self.move_sound.stopped() {
                     self.move_sound.set_volume(0.06);
-                    self.move_sound.play();
+                    self.move_sound.play().expect("Failed to play move sound");
                 }
             }
         }
@@ -731,8 +731,8 @@ impl ggez::event::EventHandler for State {
                         self.blocks = Vec::new();
                         self.rate = 1000;
                         self.music.set_repeat(true);
-                        self.music.set_volume(0.01);
-                        self.music.play();
+                        self.music.set_volume(0.02);
+                        self.music.play().expect("Failed to play music");
                     }
 
                     if self.music.paused() {
@@ -901,7 +901,7 @@ fn main() -> GameResult {
         rotate_sound: ggez::audio::Source::new(ctx, "/rotate.wav").expect("Failed to load sound effect"),
         land_sound: ggez::audio::Source::new(ctx, "/land.wav").expect("Failed to load sound effect"),
         line_sound: ggez::audio::Source::new(ctx, "/line.wav").expect("Failed to load sound effect"),
-        music: ggez::audio::Source::new(ctx, "/music.wav").expect("Failed to load music")};
+        music: ggez::audio::Source::new(ctx, "/music.ogg").expect("Failed to load music")};
 
     ggez::input::mouse::set_cursor_hidden(ctx, true);
 
