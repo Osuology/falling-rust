@@ -1,8 +1,5 @@
 #![windows_subsystem = "windows"]
 
-//Fix the bug with line deletion where tiles merge weirdly (the top tile probably isn't moving down for some reason)
-//confirmed: bug is caused by last block not actually moving down, was confirmed in master branch, two blocks are merging onto the same line, causing a significant bug
-
 extern crate rand;
 
 use ggez::graphics::Drawable;
@@ -119,7 +116,7 @@ impl Cell {
     fn update(&mut self, pos: V2) -> GameResult {
         self.pos = pos + self.offset;
 
-        self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), CELL_SIZE, CELL_SIZE);
+        self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), self.hitbox.w, self.hitbox.h);
 
 
 
@@ -129,13 +126,22 @@ impl Cell {
     fn update_hb(&mut self) -> GameResult {
         self.hitbox = ggez::graphics::Rect::new(self.pos.x - (CELL_SIZE/2.0), self.pos.y - (CELL_SIZE/2.0), self.hitbox.w, self.hitbox.h);
 
-        if self.shrink && self.hitbox.w > 0.0 {
-            self.hitbox.w -= 2.0;
-            self.hitbox.h -= 2.0;
-            self.pos.x += 1.0;
-            self.pos.y += 1.0;
-        } else if self.hitbox.w <= 0.0 {
-            self.done = true;
+        if self.done == false {
+            if self.shrink && self.hitbox.w > 0.0 {
+                self.hitbox.w -= 2.0;
+                self.hitbox.h -= 2.0;
+                self.pos.x += 1.0;
+                self.pos.y += 1.0;
+            } else if self.hitbox.w <= 0.0 {
+                self.done = true;
+            }
+
+            if self.hitbox.w < 0.0 {
+                self.hitbox.w = 0.0;
+            }
+            if self.hitbox.h < 0.0 {
+                self.hitbox.h = 0.0;
+            }
         }
 
         Ok(())
@@ -393,8 +399,10 @@ impl State {
 
         if self.logo_timer > 3600.0 {
             self.logo_direction = false;
+            self.logo_timer = 3600.0;
         } else if self.logo_timer < 0.0 {
             self.logo_direction = true;
+            self.logo_timer = 0.0;
         }
 
         Ok(())
@@ -432,34 +440,10 @@ impl State {
             Err(e) => panic!("Error: {:?}", e)
         }
 
-        for c in (0..self.blocks.iter().count()).rev() {
-            let mut blocks = self.blocks.clone();
-            blocks[c].update_hb().expect("Failed to update cells");
-
-            let index: usize = match blocks.iter().position(|x| *x == blocks[c]) {
-                Some(num) => num,
-                None => 0,
-            };
-
-            let cell = blocks[c];
-            if blocks[c].done {
-                if self.line_sound.stopped() {
-                    self.line_sound.set_volume(0.06);
-                    self.line_sound.play().expect("Failed to play line sound");
-                }
-                
-                for a in blocks.iter_mut().filter(|x| x.pos.x == cell.pos.x - 16.0 && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
-                    a.move_rel((0.0, CELL_SIZE));
-                    //bug is not fixed by following line:
-                    a.update_hb();
-                }
-
-                blocks.remove(index);
-            }
-            self.blocks = blocks;
-        }
-
         for c in 0..self.blocks.iter().count() {
+
+            self.blocks[c].update_hb().expect("Failed to update cells");
+
             if self.blocks[c].pos.x - (CELL_SIZE/2.0) == EDGE_X1 {
                 let cell = self.blocks[c];
                 let sum: usize = self.blocks.clone().iter().filter(|&x| x.pos.y == cell.pos.y).count();
@@ -469,6 +453,32 @@ impl State {
                     }
                 }
             }
+        }
+
+        {
+            let mut blocks = self.blocks.clone();
+
+            for c in (0..self.blocks.iter().count()).rev() {
+
+                let cell = blocks[c];
+                if blocks[c].done {
+                    if self.line_sound.stopped() {
+                        self.line_sound.set_volume(0.06);
+                        self.line_sound.play().expect("Failed to play line sound");
+                    }
+                    
+                    for a in blocks.iter_mut().filter(|x| x.pos.x >= cell.pos.x - (CELL_SIZE) && x.pos.x <= cell.pos.x && x.pos.y < cell.pos.y).collect::<Vec<&mut Cell>>() {
+                        a.move_rel((0.0, CELL_SIZE*1.0));
+                        a.update_hb().expect("Failed to update cell");
+                    }
+
+                    blocks.remove(c);
+
+                    println!("removed block");
+                }
+            }
+
+            self.blocks = blocks;
         }
 
         Ok(())
